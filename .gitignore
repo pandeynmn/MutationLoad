@@ -1,1 +1,3 @@
 mutationload
+*.o
+datafor*

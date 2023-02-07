@@ -825,7 +825,8 @@ double CalculateDeathRate(int ismodular, int elementsperlb, double *parent1gamet
             else if(deleteriousdistribution == 1)
                 inddeathrate = b_0 - s*(pow(r, (i_init -currentlinkageblocksload -1)) -1)/(log(r));
             }
-    } else if (ismodular == 2) {
+    } 
+    if (ismodular == 2) {
         totallinkageblocks = totalindividualgenomelength/2;
         if (r == 1.0) {}
         else {
