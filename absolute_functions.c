@@ -21,7 +21,7 @@
 #include <tskit/core.h>
 
 
-double RunSimulationAbs(bool issnapshot, char *prevsnapshotfilename, bool isredinmaxpopsize, int redinmaxpopsize, char* mubname, char* Sbname, int tskitstatus, bool ismodular, int elementsperlb, bool isabsolute, int maxTime, int initialPopSize, int K, int chromosomesize, int numberofchromosomes, double deleteriousmutationrate, double Sd, int deleteriousdistribution, double beneficialmutationrate, double Sb, int beneficialdistribution, double r, int i_init, double s, gsl_rng* randomnumbergeneratorforgamma, FILE *miscfilepointer, FILE *veryverbosefilepointer, int rawdatafilesize)
+double RunSimulationAbs(bool issnapshot, char *prevsnapshotfilename, bool isredinmaxpopsize, int redinmaxpopsize, char* mubname, char* Sbname, int tskitstatus, int ismodular, int elementsperlb, bool isabsolute, int maxTime, int initialPopSize, int K, int chromosomesize, int numberofchromosomes, double deleteriousmutationrate, double Sd, int deleteriousdistribution, double beneficialmutationrate, double Sb, int beneficialdistribution, double r, int i_init, double s, gsl_rng* randomnumbergeneratorforgamma, FILE *miscfilepointer, FILE *veryverbosefilepointer, int rawdatafilesize)
 {
 
     if(!isabsolute){
@@ -52,16 +52,22 @@ double RunSimulationAbs(bool issnapshot, char *prevsnapshotfilename, bool isredi
     }
 
     int kappa;
-    if(r == 1.0){
-        kappa = K/(s*i_init);
-    }
-    else{
-        if(deleteriousdistribution == 0){
-            kappa = (1-r)*K/(s);
+    if (ismodular == 0) {
+        if(r == 1.0){
+            kappa = K/(s*i_init);
         }
-        else if(deleteriousdistribution == 1){
-            kappa = -(log(r)*K)/(s);
+        else{
+            if(deleteriousdistribution == 0){
+                kappa = (1-r)*K/(s);
+            }
+            else if(deleteriousdistribution == 1){
+                kappa = -(log(r)*K)/(s);
+            }
         }
+    } else if (ismodular == 2) {
+        if (r == 1.0) {}
+        else
+            kappa = K*(1-r) / s;  // k' = {K(1-R)/(sL)}/L = {K(1-R)/s}
     }
     int maxPopSize = kappa;
 	//variables used to define birth rate
@@ -83,8 +89,9 @@ double RunSimulationAbs(bool issnapshot, char *prevsnapshotfilename, bool isredi
     int totalpopulationgenomelength;
     int totalindividualgenomelength;
     double *parent1gamete, *parent2gamete;
+    int totallinkageblocks = totalindividualgenomelength/2;
 
-    if(!ismodular){
+    if(ismodular == 0 || ismodular == 2){
         totalpopulationgenomelength = maxPopSize * numberofchromosomes * 2 * chromosomesize;
         totalindividualgenomelength = numberofchromosomes * 2 * chromosomesize;
         wholepopulationgenomes = malloc(sizeof(double) * totalpopulationgenomelength);
@@ -517,7 +524,7 @@ bool discoverEvent(double deathRate, double birthRate) {
 
 }
 
-bool PerformOneEventAbs(int tskitstatus, int isburninphaseover, bool ismodular, int elementsperlb, tsk_table_collection_t *treesequencetablecollection, tsk_id_t * wholepopulationnodesarray, tsk_id_t * wholepopulationsitesarray, int *pPopSize, double * pCurrenttime, double *wholepopulationgenomes, long double *wholepopulationselectiontree, long double *wholepopulationdeathratesarray, bool *wholepopulationisfree, int *wholepopulationindex, long double *psumofdeathrates, long double *psumofdeathratessquared, double* parent1gamete, double* parent2gamete, int totaltimesteps, bool isabsolute, bool birthhappens, int maxPopSize, int chromosomesize, int numberofchromosomes, int totalindividualgenomelength, double deleteriousmutationrate, double Sd, int deleteriousdistribution, double beneficialmutationrate, double Sb, int beneficialdistribution,  double b_0, double r, int i_init, double s, gsl_rng* randomnumbergeneratorforgamma, FILE *miscfilepointer)
+bool PerformOneEventAbs(int tskitstatus, int isburninphaseover, int ismodular, int elementsperlb, tsk_table_collection_t *treesequencetablecollection, tsk_id_t * wholepopulationnodesarray, tsk_id_t * wholepopulationsitesarray, int *pPopSize, double * pCurrenttime, double *wholepopulationgenomes, long double *wholepopulationselectiontree, long double *wholepopulationdeathratesarray, bool *wholepopulationisfree, int *wholepopulationindex, long double *psumofdeathrates, long double *psumofdeathratessquared, double* parent1gamete, double* parent2gamete, int totaltimesteps, bool isabsolute, bool birthhappens, int maxPopSize, int chromosomesize, int numberofchromosomes, int totalindividualgenomelength, double deleteriousmutationrate, double Sd, int deleteriousdistribution, double beneficialmutationrate, double Sb, int beneficialdistribution,  double b_0, double r, int i_init, double s, gsl_rng* randomnumbergeneratorforgamma, FILE *miscfilepointer)
 {
     if(isabsolute == 0){
         fprintf(miscfilepointer, "\n Trying to use PerformOneEventAbs within a non absolute fitness simulation. \n");
@@ -789,7 +796,7 @@ void indexArrayFlipDeath(int *wholepopulationindex, int placeinindex, int popsiz
     wholepopulationindex[(popsize-1)] = indexvictim;
 }
 
-double CalculateDeathRate(bool ismodular, int elementsperlb, double *parent1gamete, double *parent2gamete, int totalindividualgenomelength, int deleteriousdistribution,double b_0, double r, int i_init, double s)
+double CalculateDeathRate(int ismodular, int elementsperlb, double *parent1gamete, double *parent2gamete, int totalindividualgenomelength, int deleteriousdistribution,double b_0, double r, int i_init, double s)
 {
     double inddeathrate = 0.0;
     double currentlinkageblocksload = 0.0;
@@ -818,6 +825,18 @@ double CalculateDeathRate(bool ismodular, int elementsperlb, double *parent1game
             else if(deleteriousdistribution == 1)
                 inddeathrate = b_0 - s*(pow(r, (i_init -currentlinkageblocksload -1)) -1)/(log(r));
             }
+    } else if (ismodular == 2) {
+        totallinkageblocks = totalindividualgenomelength/2;
+        if (r == 1.0) {}
+        else {
+            double R_xl = 0.0;
+            // SUM = Σ (R^xl) 1 -> L
+            for (i = 0; i < totallinkageblocks; i++) {
+                double xl = i_init - ((parent1gamete[i] + parent2gamete[i]) / 2);
+                R_xl += pow(r, xl);
+            }
+            inddeathrate = b_0 - (( s * (1/1-r) * (totallinkageblocks - R_xl )) / totallinkageblocks); // b0 - (∆d * (1/1-r) * SUM) / L
+        }
     }
     else{
         printf("Error no code for CalculateDeathRate function with modularity yet");

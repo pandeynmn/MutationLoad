@@ -1,7 +1,10 @@
 #!/bin/bash
 
-#Mutationload variables
-timeSteps=500000
+# set library path for shared libraries
+LD_LIBRARY_PATH=/home/npandey/gsl/lib
+export LD_LIBRARY_PATH
+
+timeSteps=50000
 initialPopsize=20000
 mud=2.0
 chromosomesize=50
@@ -19,19 +22,19 @@ K=20000
 fitnesstype=1
 r=0.98
 i_init=400
-s=0.01
+s=0.001
 tskit=0
-#0 for runs without modular epistasis; 1 for runs with modular epistasis
-modularepis=0
-elementsperl=0
+#0 for runs without modular epistasis; 1 for runs with modular epistasis; 2 for modular epistasis in diploids
+modularepis=2
+elementsperl=1
 #This ratio should be between 1 and 10
-SdtoSbratio=1
+SdtoSbratio=1.0000
 Sbname="1.0000"
 #0 for point; 1 for exponential
 deldist=0
-rawfilesize=10000
-redinK=0
+rawfilesize=$timeSteps/100
 
+redinK=0  
 
 if [ $fitnesstype -eq 0 ]
 then
@@ -43,10 +46,10 @@ fi
 
 if [ $tskit -eq 0 ]
 then
-    	tskitstring="OFF_"
+	tskitstring="OFF_"
 elif [ $tskit -eq 1 ]
 then
-    	tskitstring="ON_"
+	tskitstring="ON_"
 fi
 
 
@@ -80,6 +83,10 @@ then
 elif [ $modularepis -eq 1 ]
 then
 	directory="datafor_"$fitnessstring"tskit_"$tskitstring"elementsperlb_"$elementsperl"_r_"$r"_iinit_"$i_init"_s_"$s"_K_"$K"_deldist_"$deldiststring"bendist_"$bendiststring"mub_"$mub"_chromnum_"$numberofchromosomes"_N0_"$initialPopsize"_mud_"$mud"_L_"$chromosomesize"_seed_"$seed"/"
+# diploid
+elif [ $modularepis -eq 2 ]
+then
+	directory="datafor_"$fitnessstring"diploid_tskit_"$tskitstring"elementsperlb_"$elementsperl"_r_"$r"_iinit_"$i_init"_s_"$s"_K_"$K"_deldist_"$deldiststring"bendist_"$bendiststring"mub_"$mub"_chromnum_"$numberofchromosomes"_N0_"$initialPopsize"_mud_"$mud"_L_"$chromosomesize"_seed_"$seed"/"
 fi
 
 file1='popsnapshotfor_Sb_'$Sbname'mub_'$mub".txt"
@@ -96,16 +103,10 @@ then
 	snapshot=1
 fi
 
-SECONDS=0
-echo "start of mutationload program"
 
-./mutationload $timeSteps $initialPopsize $mud $chromosomesize $numberofchromosomes $bentodelrateratio $sb $bendist $typeofrun $slope $seed $K $fitnesstype $r $i_init $s $tskit $modularepis $elementsperl $snapshot $file1 $SdtoSbratio $deldist $rawfilesize $redinK
+time ./mutationload $timeSteps $initialPopsize $mud $chromosomesize $numberofchromosomes $bentodelrateratio $sb $bendist $typeofrun $slope $seed $K $fitnesstype $r $i_init $s $tskit $modularepis $elementsperl $snapshot $file1 $SdtoSbratio $deldist $rawfilesize $redinK
 
-#$snapshot $directory$file1
+# $snapshot $directory$file1
 echo $directory$file1
-
-echo $SECONDS
-
-echo "end of mutationload program"
 
 gzip $directory$file1
